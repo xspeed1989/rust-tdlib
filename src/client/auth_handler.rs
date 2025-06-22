@@ -6,9 +6,10 @@ use dyn_clone::DynClone;
 use tokio::sync::Mutex;
 
 use crate::types::{
-    AuthorizationStateWaitCode,
-    AuthorizationStateWaitOtherDeviceConfirmation, AuthorizationStateWaitPassword,
-    AuthorizationStateWaitPhoneNumber, AuthorizationStateWaitRegistration,
+    AuthorizationStateWaitCode, AuthorizationStateWaitEmailAddress,
+    AuthorizationStateWaitEmailCode, AuthorizationStateWaitOtherDeviceConfirmation,
+    AuthorizationStateWaitPassword, AuthorizationStateWaitPhoneNumber,
+    AuthorizationStateWaitRegistration, EmailAddressAuthentication, EmailAddressAuthenticationCode,
 };
 
 use crate::utils;
@@ -41,6 +42,19 @@ pub trait ClientAuthStateHandler: DynClone + Send + Sync + Debug {
         &self,
         wait_phone_number: &AuthorizationStateWaitPhoneNumber,
     ) -> ClientIdentifier;
+
+    /// Returns email address
+    async fn handle_wait_email_address(
+        &self,
+        wait_email_address: &AuthorizationStateWaitEmailAddress,
+    ) -> String;
+
+    /// Returns email code
+    async fn handle_wait_email_code(
+        &self,
+        wait_email_code: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication;
+
     /// Returns first_name and second_name
     async fn handle_wait_registration(
         &self,
@@ -83,6 +97,21 @@ pub trait AuthStateHandler {
         client: Box<dyn ClientAuthStateHandler>,
         wait_phone_number: &AuthorizationStateWaitPhoneNumber,
     ) -> ClientIdentifier;
+
+    /// Returns email address
+    async fn handle_wait_email_address(
+        &self,
+        client: Box<dyn ClientAuthStateHandler>,
+        wait_email_address: &AuthorizationStateWaitEmailAddress,
+    ) -> String;
+
+    /// Returns email code
+    async fn handle_wait_email_code(
+        &self,
+        client: Box<dyn ClientAuthStateHandler>,
+        wait_email_code: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication;
+
     /// Returns first_name and second_name
     async fn handle_wait_registration(
         &self,
@@ -152,6 +181,35 @@ impl AuthStateHandler for ConsoleAuthStateHandler {
             }
         }
     }
+
+    async fn handle_wait_email_address(
+        &self,
+        _client: Box<dyn ClientAuthStateHandler>,
+        _wait_email_address: &AuthorizationStateWaitEmailAddress,
+    ) -> String {
+        loop {
+            println!("waiting for email address");
+            let inp = utils::wait_input_sync();
+            if inp.contains('@') {
+                return inp;
+            }
+        }
+    }
+
+    async fn handle_wait_email_code(
+        &self,
+        _client: Box<dyn ClientAuthStateHandler>,
+        _wait_email_code: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication {
+        loop {
+            println!("waiting for email code");
+            let inp = utils::wait_input_sync();
+            if inp.len() == 6 {
+                return EmailAddressAuthentication::Code(EmailAddressAuthenticationCode::builder().code(inp).build());
+            }
+        }
+    }
+
     async fn handle_wait_registration(
         &self,
         _client: Box<dyn ClientAuthStateHandler>,
@@ -235,6 +293,34 @@ impl AuthStateHandler for SignalAuthStateHandler {
         }
     }
 
+    async fn handle_wait_email_address(
+        &self,
+        _client: Box<dyn ClientAuthStateHandler>,
+        _: &AuthorizationStateWaitEmailAddress,
+    ) -> String {
+        loop {
+            log::info!("waiting for email address");
+            let inp = self.wait_signal().await;
+            if inp.contains("@") {
+                return inp.to_string();
+            }
+        }
+    }
+
+    async fn handle_wait_email_code(
+        &self,
+        _client: Box<dyn ClientAuthStateHandler>,
+        _: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication {
+        loop {
+            log::info!("waiting for email code");
+            let inp = self.wait_signal().await;
+            if inp.len() == 6 {
+                return EmailAddressAuthentication::Code(EmailAddressAuthenticationCode::builder().code(inp).build());
+            }
+        }
+    }
+
     async fn handle_wait_registration(
         &self,
         _client: Box<dyn ClientAuthStateHandler>,
@@ -306,6 +392,22 @@ impl AuthStateHandler for AuthStateHandlerProxy {
         client
             .handle_wait_client_identifier(wait_phone_number)
             .await
+    }
+
+    async fn handle_wait_email_address(
+        &self,
+        client: Box<dyn ClientAuthStateHandler>,
+        wait_email_address: &AuthorizationStateWaitEmailAddress,
+    ) -> String {
+        client.handle_wait_email_address(wait_email_address).await
+    }
+
+    async fn handle_wait_email_code(
+        &self,
+        client: Box<dyn ClientAuthStateHandler>,
+        wait_email_code: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication {
+        client.handle_wait_email_code(wait_email_code).await
     }
 
     async fn handle_wait_registration(

@@ -23,9 +23,11 @@ pub use worker::{Worker, WorkerBuilder};
 
 use crate::client::auth_handler::ClientAuthStateHandler;
 use crate::types::{
-    AuthorizationStateWaitCode,
-    AuthorizationStateWaitPassword, AuthorizationStateWaitPhoneNumber,
-    AuthorizationStateWaitRegistration, Close, Ok, RFunction, SetTdlibParameters, Update,
+    AuthorizationStateWaitCode, AuthorizationStateWaitEmailAddress,
+    AuthorizationStateWaitEmailCode, AuthorizationStateWaitPassword,
+    AuthorizationStateWaitPhoneNumber, AuthorizationStateWaitRegistration, Close,
+    EmailAddressAuthentication, EmailAddressAuthenticationCode, Ok, RFunction, SetTdlibParameters,
+    Update,
 };
 use crate::{
     errors::{Error, Result},
@@ -94,6 +96,34 @@ impl ClientAuthStateHandler for ConsoleClientStateHandler {
         }
     }
 
+    async fn handle_wait_email_address(
+        &self,
+        _wait_email_address: &AuthorizationStateWaitEmailAddress,
+    ) -> String {
+        loop {
+            println!("waiting for email address");
+            let inp: String = utils::wait_input_sync();
+            if inp.contains('@') {
+                return inp;
+            }
+        }
+    }
+
+    async fn handle_wait_email_code(
+        &self,
+        _wait_email_code: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication {
+        loop {
+            println!("waiting for email code");
+            let inp: String = utils::wait_input_sync();
+            if inp.len() == 6 {
+                return EmailAddressAuthentication::Code(
+                    EmailAddressAuthenticationCode::builder().code(inp).build(),
+                );
+            }
+        }
+    }
+
     async fn handle_wait_registration(
         &self,
         _wait_registration: &AuthorizationStateWaitRegistration,
@@ -137,6 +167,31 @@ impl ClientAuthStateHandler for ConsoleClientStateHandlerIdentified {
         _: &AuthorizationStateWaitPhoneNumber,
     ) -> ClientIdentifier {
         self.0.clone()
+    }
+
+    async fn handle_wait_email_address(&self, _: &AuthorizationStateWaitEmailAddress) -> String {
+        loop {
+            println!("Input email address:");
+            let inp: String = utils::wait_input_sync();
+            if inp.contains('@') {
+                return inp;
+            }
+        }
+    }
+
+    async fn handle_wait_email_code(
+        &self,
+        _: &AuthorizationStateWaitEmailCode,
+    ) -> EmailAddressAuthentication {
+        loop {
+            println!("Input email code:");
+            let inp: String = utils::wait_input_sync();
+            if inp.len() == 6 {
+                return EmailAddressAuthentication::Code(
+                    EmailAddressAuthenticationCode::builder().code(inp).build(),
+                );
+            }
+        }
     }
 
     async fn handle_wait_registration(

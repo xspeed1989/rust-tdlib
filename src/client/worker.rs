@@ -11,9 +11,10 @@ use crate::{
     errors::{Error, Result},
     tdjson::ClientId,
     types::{
-        AuthorizationState, CheckAuthenticationCode, CheckAuthenticationPassword,
-        GetApplicationConfig, RObject, RegisterUser,
-        SetAuthenticationPhoneNumber, SetTdlibParameters, Update, UpdateAuthorizationState,
+        AuthorizationState, CheckAuthenticationCode, CheckAuthenticationEmailCode,
+        CheckAuthenticationPassword, GetApplicationConfig, RObject, RegisterUser,
+        SetAuthenticationEmailAddress, SetAuthenticationPhoneNumber, Update,
+        UpdateAuthorizationState, EmailAddressAuthenticationCode
     },
 };
 use std::collections::HashMap;
@@ -193,8 +194,12 @@ where
             AuthorizationState::GetAuthorizationState(_) => {
                 panic!()
             }
-            AuthorizationState::WaitEmailAddress(_) => {panic!()}
-            AuthorizationState::WaitEmailCode(_) => {panic!()}
+            AuthorizationState::WaitEmailAddress(_) => {
+                panic!()
+            }
+            AuthorizationState::WaitEmailCode(_) => {
+                panic!()
+            }
         }
     }
 
@@ -651,11 +656,12 @@ where
             Ok(())
         }
         AuthorizationState::WaitTdlibParameters(_) => {
-            log::debug!("going to set tdlib parameters: {:?}", client.tdlib_parameters());
+            log::debug!(
+                "going to set tdlib parameters: {:?}",
+                client.tdlib_parameters()
+            );
             client
-                .set_tdlib_parameters(
-                    client.tdlib_parameters()
-                )
+                .set_tdlib_parameters(client.tdlib_parameters())
                 .await?;
             log::debug!("tdlib parameters set");
             Ok(())
@@ -663,8 +669,39 @@ where
         AuthorizationState::GetAuthorizationState(_) => Err(Error::Internal(
             "retrieved GetAuthorizationState update but observer not found any subscriber",
         )),
-        AuthorizationState::WaitEmailAddress(_) => {todo!("wait email address is not supported")}
-        AuthorizationState::WaitEmailCode(_) => {todo!("wait email code is not supported")}
+        AuthorizationState::WaitEmailAddress(wait_email_address) => {
+            log::debug!("handle wait email address");
+            let email_address = auth_state_handler
+                .handle_wait_email_address(client.get_auth_handler(), wait_email_address)
+                .await;
+            client
+                .set_authentication_email_address(
+                    SetAuthenticationEmailAddress::builder()
+                        .email_address(email_address)
+                        .build(),
+                )
+                .await?;
+            Ok(())
+        }
+        AuthorizationState::WaitEmailCode(wait_email_code) => {
+            log::debug!("handle wait email code");
+            let email_code = auth_state_handler
+                .handle_wait_email_code(client.get_auth_handler(), wait_email_code)
+                .await;
+            
+            // client
+            //     .check_authentication_email_code(
+            //         CheckAuthenticationEmailCode::builder()
+            //             .code(
+            //                 EmailAddressAuthentication::builder()
+            //                     .code(email_code)
+            //                     .build(),
+            //             )
+            //             .build(),
+            //     )
+            //     .await?;
+            Ok(())
+        }
     };
 
     match &result_state {
