@@ -6,7 +6,7 @@ use super::{
     {Client, ClientState},
 };
 use crate::client::{ClientIdentifier, CLIENT_NOT_AUTHORIZED};
-use crate::types::{CheckAuthenticationBotToken, GetAuthorizationState, JsonValue, CheckAuthenticationEmailCode, EmailAddressAuthentication};
+use crate::types::{CheckAuthenticationBotToken, GetAuthorizationState, JsonValue, CheckAuthenticationEmailCode};
 use crate::{
     errors::{Error, Result},
     tdjson::ClientId,
