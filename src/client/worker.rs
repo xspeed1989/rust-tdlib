@@ -6,15 +6,15 @@ use super::{
     {Client, ClientState},
 };
 use crate::client::{ClientIdentifier, CLIENT_NOT_AUTHORIZED};
-use crate::types::{CheckAuthenticationBotToken, GetAuthorizationState, JsonValue};
+use crate::types::{CheckAuthenticationBotToken, GetAuthorizationState, JsonValue, CheckAuthenticationEmailCode, EmailAddressAuthentication};
 use crate::{
     errors::{Error, Result},
     tdjson::ClientId,
     types::{
-        AuthorizationState, CheckAuthenticationCode, CheckAuthenticationEmailCode,
+        AuthorizationState, CheckAuthenticationCode,
         CheckAuthenticationPassword, GetApplicationConfig, RObject, RegisterUser,
         SetAuthenticationEmailAddress, SetAuthenticationPhoneNumber, Update,
-        UpdateAuthorizationState, EmailAddressAuthenticationCode
+        UpdateAuthorizationState
     },
 };
 use std::collections::HashMap;
@@ -689,17 +689,13 @@ where
                 .handle_wait_email_code(client.get_auth_handler(), wait_email_code)
                 .await;
             
-            // client
-            //     .check_authentication_email_code(
-            //         CheckAuthenticationEmailCode::builder()
-            //             .code(
-            //                 EmailAddressAuthentication::builder()
-            //                     .code(email_code)
-            //                     .build(),
-            //             )
-            //             .build(),
-            //     )
-            //     .await?;
+            client
+                .check_authentication_email_code(
+                    CheckAuthenticationEmailCode::builder()
+                        .code(email_code)
+                        .build(),
+                )
+                .await?;
             Ok(())
         }
     };
